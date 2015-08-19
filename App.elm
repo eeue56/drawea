@@ -9,6 +9,7 @@ import Graphics.Collage exposing (..)
 
 import Color exposing (Color, red, blue, yellow, black)
 import Set exposing (Set)
+import Dict exposing (Dict)
 
 import Random exposing (generate, initialSeed, int)
 
@@ -16,9 +17,10 @@ import Random exposing (generate, initialSeed, int)
 mouseMailbox : Signal.Mailbox Action
 mouseMailbox = Signal.mailbox Nothing
 
+
 type alias Model = {
   color : Color,
-  points : List (Float, Float),
+  points : Dict (Int, Int, Int) (List (Float, Float)),
   mouseAt : (Float, Float),
   windowSize : (Float, Float)
 }
@@ -33,13 +35,16 @@ type Action =
 model : Model
 model = {
   color = red,
-  points = [],
+  points = Dict.empty,
   mouseAt = (50, 50),
   windowSize = (3000, 3000) }
 
+drawColorPoints color points = 
+  traced (solid color)
+    <| path points
+
 drawPoints model = 
-  traced (solid model.color) 
-    <| path model.points
+  Dict.foldl (\(r, g, b) points xs -> (drawColorPoints (Color.rgb r g b) points) :: xs) [] model.points
 
 drawBlotch color = 
   rect 50 50
@@ -51,10 +56,7 @@ drawPointer model =
     |> move model.mouseAt
 
 view address model = 
-  collage (round <| fst model.windowSize) (round <| snd model.windowSize) [
-    drawPoints model,
-    drawPointer model
-  ]
+  collage (round <| fst model.windowSize) (round <| snd model.windowSize) <| drawPointer model :: drawPoints model
 
 scaledValues x y model =
   let 
@@ -71,6 +73,19 @@ swapColor keys = if
   | Set.member 51 keys -> yellow 
   | otherwise -> black 
 
+insertColoredPoint color point dict =
+  let 
+    rgbColor = Color.toRgb color
+    (r, g, b) = (rgbColor.red, rgbColor.green, rgbColor.blue)
+
+    f : Maybe (List (Float, Float)) -> Maybe (List (Float, Float))
+    f v = 
+      case v of
+        Just x -> Just <| point :: x
+        Maybe.Nothing -> Just [point]
+  in 
+    Dict.update (r, g, b) f dict 
+
 update : Action -> Model -> Model 
 update action model =
   case action of 
@@ -78,7 +93,7 @@ update action model =
       let
         (newX, newY) = scaledValues x y model
       in 
-        { model | points <- (newX, newY) :: model.points }
+        { model | points <- insertColoredPoint model.color (newX, newY) model.points }
     MouseMove (x, y) -> { model | mouseAt <- scaledValues x y model }
     WindowResize (x, y) -> { model | windowSize <- (x, y)}
     KeyDown keys -> if not <| Set.isEmpty keys then { model | color <- swapColor keys } else model
