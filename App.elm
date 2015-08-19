@@ -13,6 +13,7 @@ import Dict exposing (Dict)
 
 import Random exposing (generate, initialSeed, int)
 
+import Convert.Color exposing (toRgbTuple, fromRgbTuple)
 
 mouseMailbox : Signal.Mailbox Action
 mouseMailbox = Signal.mailbox Nothing
@@ -44,7 +45,7 @@ drawColorPoints color points =
     <| path points
 
 drawPoints model = 
-  Dict.foldl (\(r, g, b) points xs -> (drawColorPoints (Color.rgb r g b) points) :: xs) [] model.points
+  Dict.foldl (\color points xs -> (drawColorPoints (fromRgbTuple color) points) :: xs) [] model.points
 
 drawBlotch color = 
   rect 50 50
@@ -75,8 +76,7 @@ swapColor keys = if
 
 insertColoredPoint color point dict =
   let 
-    rgbColor = Color.toRgb color
-    (r, g, b) = (rgbColor.red, rgbColor.green, rgbColor.blue)
+    (r, g, b) = toRgbTuple color
 
     f : Maybe (List (Float, Float)) -> Maybe (List (Float, Float))
     f v = 
