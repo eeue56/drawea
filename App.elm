@@ -18,17 +18,18 @@ import Convert.Color exposing (toRgbTuple, fromRgbTuple)
 mouseMailbox : Signal.Mailbox Action
 mouseMailbox = Signal.mailbox Nothing
 
+type alias Point = (Float, Float)
 
 type alias Model = {
   color : Color,
-  points : Dict (Int, Int, Int) (List (Float, Float)),
-  mouseAt : (Float, Float),
+  points : Dict (Int, Int, Int) (List Point),
+  mouseAt : Point,
   windowSize : (Float, Float)
 }
 
 type Action = 
-  MouseClick (Float, Float) | 
-  MouseMove (Float, Float) | 
+  MouseClick Point | 
+  MouseMove Point | 
   WindowResize (Float, Float) | 
   KeyDown (Set Keyboard.KeyCode) |
   Nothing
@@ -76,15 +77,13 @@ swapColor keys = if
 
 insertColoredPoint color point dict =
   let 
-    (r, g, b) = toRgbTuple color
-
-    f : Maybe (List (Float, Float)) -> Maybe (List (Float, Float))
+    f : Maybe (List Point) -> Maybe (List Point)
     f v = 
       case v of
         Just x -> Just <| point :: x
         Maybe.Nothing -> Just [point]
   in 
-    Dict.update (r, g, b) f dict 
+    Dict.update (toRgbTuple color) f dict 
 
 update : Action -> Model -> Model 
 update action model =
